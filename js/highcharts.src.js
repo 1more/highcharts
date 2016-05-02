@@ -2,7 +2,7 @@
 // @compilation_level SIMPLE_OPTIMIZATIONS
 
 /**
- * @license Highcharts JS v4.2.4-modified (2016-04-29)
+ * @license Highcharts JS v4.2.4-modified (2016-05-02)
  *
  * (c) 2009-2016 Torstein Honsi
  *
@@ -18342,6 +18342,28 @@
                             }
                         }
 
+                        // move labels to other slot if it overflows for fixed size pie chart
+                        if (options.overflow === 'crawlUp' &&
+                            options.size !== null) {
+                            var getSlotWidth = function (index, left) {
+                                var xPos = series.getX(slots[index], left);
+                                return left ? xPos :
+                                chart.chartWidth - (xPos + 2 + distanceOption + point.dataLabel.padding + (options.connectorPadding || 5));
+                            }
+                            var slotWidth = getSlotWidth(slotIndex, i);
+                            var labelWidth = point.dataLabel.width - 10;
+
+                            if (slotWidth < labelWidth) {
+                                var direction = (centerY >= slots[slotIndex]) ? -1 : 1;
+                                while (slots[slotIndex + direction] !== null &&
+                                slotWidth < labelWidth) {
+                                    slotIndex += direction;
+                                    slotWidth = getSlotWidth(slotIndex, i);
+                                }
+                                point.dataLabel.crawled = true;
+                            }
+                        }
+
                         usedSlots.push({ i: slotIndex, y: slots[slotIndex] });
                         slots[slotIndex] = null; // mark as taken
                     }
@@ -18367,8 +18389,9 @@
                         // if the slot next to currrent slot is free, the y value is allowed
                         // to fall back to the natural position
                         y = slot.y;
-                        if ((naturalY > y && slots[slotIndex + 1] !== null) ||
-                                (naturalY < y &&  slots[slotIndex - 1] !== null)) {
+                        if (!dataLabel.crawled &&
+                                ((naturalY > y && slots[slotIndex + 1] !== null) ||
+                                (naturalY < y &&  slots[slotIndex - 1] !== null))) {
                             y = mathMin(mathMax(0, naturalY), chart.plotHeight);
                         }
 
@@ -18382,6 +18405,16 @@
                         seriesCenter[0] + (i ? -1 : 1) * (radius + distanceOption) :
                         series.getX(y === centerY - radius - distanceOption || y === centerY + radius + distanceOption ? naturalY : y, i);
 
+                    // push labels inside of the chart if it overflows for fixed size pie chart
+                    if (options.overflow === 'pushIn' &&
+                        series.options.size !== null) {
+                        var labelWidth = dataLabel.width - 10;
+                        var slotWidth = i ? x - 2 : chart.chartWidth - (x + 2 + distanceOption + dataLabel.padding + (options.connectorPadding || 5));
+                        if (slotWidth < labelWidth) {
+                            x += i ? labelWidth - slotWidth : slotWidth - labelWidth;
+                            dataLabel.pushed = true;
+                        }
+                    }
 
                     // Record the placement and visibility
                     dataLabel._attr = {
@@ -18456,6 +18489,15 @@
                                 L,
                                 labelPos[4], labelPos[5] // base
                             ];
+
+                            if (dataLabel.pushed) {
+                                if (labelPos[6] === 'right' && labelPos[4] < x ||
+                                        labelPos[6] === 'left' && labelPos[4] > x) {
+                                    connectorPath = []
+                                } else {
+                                    connectorPath.splice(3, connectorPath.length - 6);
+                                }
+                            }
 
                             if (connector) {
                                 connector.animate({ d: connectorPath });
