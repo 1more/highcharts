@@ -573,7 +573,7 @@ if (seriesTypes.pie) {
 				if (options.overflow === 'pushIn' &&
 					series.options.size !== null) {
 					var labelWidth = dataLabel.width - 10;
-					var slotWidth = i ? x - 2 : chart.chartWidth - (x + 2 + distanceOption + dataLabel.padding + (options.connectorPadding || 5));
+					var slotWidth = i ? x - (2 + (options.connectorPadding || 5)) : chart.chartWidth - (x + 2 + distanceOption + dataLabel.padding + (options.connectorPadding || 5));
 					if (slotWidth < labelWidth) {
 						x += i ? labelWidth - slotWidth : slotWidth - labelWidth;
 						dataLabel.pushed = true;
